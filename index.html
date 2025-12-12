@@ -54,6 +54,10 @@
         const Trash2 = (props) => <IconWrapper {...props}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></IconWrapper>;
         const Edit2 = (props) => <IconWrapper {...props}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></IconWrapper>;
         const Plus = (props) => <IconWrapper {...props}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></IconWrapper>;
+        const FileSpreadsheet = (props) => <IconWrapper {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></IconWrapper>;
+        const Download = (props) => <IconWrapper {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></IconWrapper>;
+        const Server = (props) => <IconWrapper {...props}><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></IconWrapper>;
+
 
         // --- MOCK DATA ---
         const ROLES = {
@@ -78,6 +82,8 @@
             { id: 6, date: '2025-03-14', merchant: 'Kelių mokestis', amount: 25.00, status: 'valid', driverId: 'd3', category: 'Mokesčiai' },
             { id: 7, date: '2025-03-14', merchant: 'Circle K', amount: 300.00, status: 'approved', driverId: 'd4', category: 'Kuras' },
             { id: 8, date: '2025-03-15', merchant: 'Plovimas', amount: 45.00, status: 'valid', driverId: 'd5', category: 'Paslaugos' },
+            { id: 9, date: '2025-03-16', merchant: 'Hesburger', amount: 12.50, status: 'valid', driverId: 'd2', category: 'Maistas', quality: 'high' },
+            { id: 10, date: '2025-03-16', merchant: 'BP Lenkija', amount: 150.00, status: 'valid', driverId: 'd1', category: 'Kuras', quality: 'high' }
         ];
 
         // --- APP KOMPONENTAS ---
@@ -126,6 +132,10 @@
                 setDocs(docs.map(d => d.id === id ? { ...d, status: newStatus } : d));
             };
 
+            const updateMultipleStatus = (ids, newStatus) => {
+                setDocs(docs.map(d => ids.includes(d.id) ? { ...d, status: newStatus } : d));
+            };
+
             if (role === ROLES.DRIVER) {
                 return (
                     <MobileDriverView 
@@ -143,6 +153,7 @@
                     drivers={drivers}
                     setDrivers={setDrivers}
                     onUpdateStatus={updateStatus}
+                    onUpdateMultipleStatus={updateMultipleStatus}
                     onManualUpload={() => setShowUploadModal(true)}
                     showModal={showUploadModal}
                     closeModal={() => setShowUploadModal(false)}
@@ -321,18 +332,49 @@
         }
 
         // --- BUHALTERĖS SĄSAJA (DESKTOP) ---
-        function DesktopAccountantView({ docs, drivers, setDrivers, onUpdateStatus, onManualUpload, showModal, closeModal, handleUpload, switchRole }) {
+        function DesktopAccountantView({ docs, drivers, setDrivers, onUpdateStatus, onUpdateMultipleStatus, onManualUpload, showModal, closeModal, handleUpload, switchRole }) {
             const validDocs = docs.filter(d => d.status === 'valid');
             const reviewDocs = docs.filter(d => d.status === 'review');
             const rejectedDocs = docs.filter(d => d.status === 'rejected');
+            const approvedDocs = docs.filter(d => d.status === 'approved'); // Eksportui
             
             const [activeTab, setActiveTab] = useState('valid'); 
+            const [selectedIds, setSelectedIds] = useState([]);
+
+            // Valo pasirinkimus keičiant tab'ą
+            useEffect(() => {
+                setSelectedIds([]);
+            }, [activeTab]);
 
             const getDriverStats = (driverId) => {
                 const driverDocs = docs.filter(d => d.driverId === driverId);
                 const total = driverDocs.reduce((acc, d) => acc + d.amount, 0);
                 const count = driverDocs.length;
                 return { total, count };
+            };
+
+            const toggleSelection = (id) => {
+                if (selectedIds.includes(id)) {
+                    setSelectedIds(selectedIds.filter(sid => sid !== id));
+                } else {
+                    setSelectedIds([...selectedIds, id]);
+                }
+            };
+
+            const toggleSelectAll = () => {
+                if (selectedIds.length === validDocs.length) {
+                    setSelectedIds([]);
+                } else {
+                    setSelectedIds(validDocs.map(d => d.id));
+                }
+            };
+
+            const handleBulkApprove = () => {
+                if (confirm(`Ar tikrai patvirtinti ${selectedIds.length} dokumentus?`)) {
+                    onUpdateMultipleStatus(selectedIds, 'approved');
+                    setSelectedIds([]);
+                    // Galima automatiškai perjungti į 'eksportas' tabą, bet gal geriau palikti
+                }
             };
 
             return (
@@ -363,6 +405,11 @@
                             <button onClick={() => setActiveTab('rejected')} className={`w-full flex justify-between items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'rejected' ? 'bg-red-50 text-red-700' : 'text-gray-600 hover:bg-gray-50'}`}>
                                 <span className="flex items-center gap-3"><XCircle size={18}/> Atmesti</span>
                                 <span className="text-xs text-gray-400">{rejectedDocs.length}</span>
+                            </button>
+
+                            <button onClick={() => setActiveTab('export')} className={`w-full flex justify-between items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'export' ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                                <span className="flex items-center gap-3"><FileSpreadsheet size={18}/> Eksportas</span>
+                                {approvedDocs.length > 0 && <span className="bg-green-100 text-green-700 py-0.5 px-2 rounded-full text-xs">{approvedDocs.length}</span>}
                             </button>
                             
                             <div className="border-t border-gray-100 my-4 pt-4"></div>
@@ -396,15 +443,27 @@
                                 {activeTab === 'valid' && 'Paruošti tvirtinimui'}
                                 {activeTab === 'review' && 'Neaiškūs dokumentai'}
                                 {activeTab === 'rejected' && 'Atmestos ataskaitos'}
+                                {activeTab === 'export' && 'Eksportas ir Integracijos'}
                                 {activeTab === 'reports' && 'Vairuotojų išlaidų ataskaita'}
                                 {activeTab === 'drivers' && 'Vairuotojų valdymas'}
                                 </h1>
                                 <p className="text-gray-500 text-sm mt-1">
-                                {(activeTab === 'valid' || activeTab === 'review') && 'Peržiūrėkite ir patvirtinkite dokumentus.'}
-                                {activeTab === 'reports' && 'Šio mėnesio suvestinė.'}
-                                {activeTab === 'drivers' && 'Pridėti, šalinti ar redaguoti vairuotojų prieigą.'}
+                                {activeTab === 'valid' && 'Pažymėkite dokumentus masiniam tvirtinimui.'}
+                                {activeTab === 'review' && 'Reikalingas rankinis patikrinimas.'}
+                                {activeTab === 'export' && 'Patvirtinti dokumentai paruošti siuntimui į apskaitą.'}
                                 </p>
                             </div>
+                            
+                            {/* Mass Action Button for Valid Tab */}
+                            {activeTab === 'valid' && selectedIds.length > 0 && (
+                                <button 
+                                    onClick={handleBulkApprove}
+                                    className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 flex items-center gap-2 animate-bounce-sm transition-all"
+                                >
+                                    <CheckCircle size={18} />
+                                    Tvirtinti pasirinktus ({selectedIds.length})
+                                </button>
+                            )}
                         </header>
 
                         {(activeTab === 'valid' || activeTab === 'review' || activeTab === 'rejected') && (
@@ -412,6 +471,16 @@
                                 <table className="w-full text-left border-collapse">
                                     <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                                         <tr>
+                                            {activeTab === 'valid' && (
+                                                <th className="p-4 w-10">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                        onChange={toggleSelectAll}
+                                                        checked={selectedIds.length === validDocs.length && validDocs.length > 0}
+                                                    />
+                                                </th>
+                                            )}
                                             <th className="p-4 font-medium">Dokumentas</th>
                                             <th className="p-4 font-medium">Vairuotojas</th>
                                             <th className="p-4 font-medium">Data</th>
@@ -422,7 +491,17 @@
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 text-sm">
                                         {(activeTab === 'valid' ? validDocs : activeTab === 'review' ? reviewDocs : rejectedDocs).map(doc => (
-                                            <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
+                                            <tr key={doc.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(doc.id) ? 'bg-blue-50' : ''}`}>
+                                                {activeTab === 'valid' && (
+                                                    <td className="p-4">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                            checked={selectedIds.includes(doc.id)}
+                                                            onChange={() => toggleSelection(doc.id)}
+                                                        />
+                                                    </td>
+                                                )}
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-gray-500">
@@ -471,8 +550,84 @@
                                                 </td>
                                             </tr>
                                         ))}
+                                        {(activeTab === 'valid' ? validDocs : activeTab === 'review' ? reviewDocs : rejectedDocs).length === 0 && (
+                                            <tr>
+                                                <td colSpan="7" className="p-8 text-center text-gray-400">
+                                                    Sąrašas tuščias.
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
+                            </div>
+                        )}
+
+                        {/* --- EXPORT TAB --- */}
+                        {activeTab === 'export' && (
+                            <div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                    <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-6 rounded-xl border border-green-200 flex flex-col items-center text-center">
+                                        <div className="p-3 bg-green-200 text-green-700 rounded-full mb-3">
+                                            <Server size={32} />
+                                        </div>
+                                        <h3 className="font-bold text-gray-800">Rivilė API</h3>
+                                        <p className="text-xs text-gray-600 mb-4 mt-1">Tiesioginis duomenų siuntimas į buhalterinę programą per API.</p>
+                                        <button onClick={() => alert("Siunčiama į Rivilę... (Simuliacija: Sėkmingai suimportuota 4 dok.)")} className="w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition">
+                                            Siųsti duomenis
+                                        </button>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-xl border border-gray-200 flex flex-col items-center text-center shadow-sm">
+                                        <div className="p-3 bg-blue-50 text-blue-600 rounded-full mb-3">
+                                            <FileSpreadsheet size={32} />
+                                        </div>
+                                        <h3 className="font-bold text-gray-800">Excel Ataskaita</h3>
+                                        <p className="text-xs text-gray-600 mb-4 mt-1">Standartinė Excel lentelė su visais išlaidų duomenimis.</p>
+                                        <button onClick={() => alert("Atsisiunčiamas Excel failas...")} className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                                            <Download size={16}/> Atsisiųsti .XLSX
+                                        </button>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-xl border border-gray-200 flex flex-col items-center text-center shadow-sm">
+                                        <div className="p-3 bg-gray-100 text-gray-600 rounded-full mb-3">
+                                            <FileText size={32} />
+                                        </div>
+                                        <h3 className="font-bold text-gray-800">CSV Formatas</h3>
+                                        <p className="text-xs text-gray-600 mb-4 mt-1">Paprastas tekstinis formatas importui į kitas sistemas.</p>
+                                        <button onClick={() => alert("Atsisiunčiamas CSV failas...")} className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                                            <Download size={16}/> Atsisiųsti .CSV
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <h3 className="font-bold text-lg mb-4 text-gray-700">Paruošti eksportui ({approvedDocs.length})</h3>
+                                <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+                                     <table className="w-full text-left border-collapse">
+                                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                                            <tr>
+                                                <th className="p-4 font-medium">Data</th>
+                                                <th className="p-4 font-medium">Tiekėjas</th>
+                                                <th className="p-4 font-medium">Kategorija</th>
+                                                <th className="p-4 font-medium">Vairuotojas</th>
+                                                <th className="p-4 font-medium text-right">Suma</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 text-sm">
+                                            {approvedDocs.map(doc => (
+                                                <tr key={doc.id} className="hover:bg-gray-50">
+                                                    <td className="p-4 text-gray-500">{doc.date}</td>
+                                                    <td className="p-4 font-medium text-gray-900">{doc.merchant}</td>
+                                                    <td className="p-4 text-gray-500">{doc.category}</td>
+                                                    <td className="p-4 text-gray-500">{drivers.find(d => d.id === doc.driverId)?.name}</td>
+                                                    <td className="p-4 text-right font-bold">{doc.amount.toFixed(2)} €</td>
+                                                </tr>
+                                            ))}
+                                            {approvedDocs.length === 0 && (
+                                                <tr><td colSpan="5" className="p-8 text-center text-gray-400">Nėra patvirtintų dokumentų eksportui.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
 
