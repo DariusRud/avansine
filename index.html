@@ -196,8 +196,8 @@
                                 <p className="text-gray-400 text-sm">Volvo FH (ABC-123)</p>
                             </div>
                         )}
-                        <button onClick={switchRole} className="p-2 bg-gray-800 rounded-full text-xs text-gray-500">
-                        (Demo: Birutė)
+                        <button onClick={switchRole} className="p-2 bg-gray-800 rounded-full text-xs text-gray-500 animate-pulse border border-gray-600 hover:bg-gray-700 transition-colors">
+                            (Grįžti) Birutė
                         </button>
                     </div>
 
@@ -430,9 +430,6 @@
                                 <Plus size={18} />
                                 Įkelti dokumentą
                             </button>
-                            <button onClick={switchRole} className="mt-4 w-full text-xs text-gray-400 hover:text-gray-600">
-                                Perjungti į Vairuotojo vaizdą (Demo)
-                            </button>
                         </div>
                     </aside>
 
@@ -455,16 +452,25 @@
                                 </p>
                             </div>
                             
-                            {/* Mass Action Button for Valid Tab */}
-                            {activeTab === 'valid' && selectedIds.length > 0 && (
+                            <div className="flex gap-3">
+                                {/* Mass Action Button for Valid Tab */}
+                                {activeTab === 'valid' && selectedIds.length > 0 && (
+                                    <button 
+                                        onClick={handleBulkApprove}
+                                        className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 flex items-center gap-2 animate-bounce-sm transition-all"
+                                    >
+                                        <CheckCircle size={18} />
+                                        Tvirtinti pasirinktus ({selectedIds.length})
+                                    </button>
+                                )}
+                                
                                 <button 
-                                    onClick={handleBulkApprove}
-                                    className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 flex items-center gap-2 animate-bounce-sm transition-all"
+                                    onClick={switchRole} 
+                                    className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-purple-700 animate-pulse transition-all"
                                 >
-                                    <CheckCircle size={18} />
-                                    Tvirtinti pasirinktus ({selectedIds.length})
+                                    (Demo) Vairuotojo aplinka
                                 </button>
-                            )}
+                            </div>
                         </header>
 
                         {(activeTab === 'valid' || activeTab === 'review' || activeTab === 'rejected') && (
