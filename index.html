@@ -88,7 +88,8 @@
 
         // --- APP KOMPONENTAS ---
         function App() {
-            const [role, setRole] = useState(ROLES.DRIVER);
+            // PAKEISTAS DEFAULT ROLĖS NUSTATYMAS
+            const [role, setRole] = useState(ROLES.ACCOUNTANT);
             const [docs, setDocs] = useState(INITIAL_DOCS);
             const [drivers, setDrivers] = useState(INITIAL_DRIVERS);
             const [showUploadModal, setShowUploadModal] = useState(false);
